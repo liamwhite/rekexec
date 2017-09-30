@@ -20,7 +20,9 @@ struct gdt_ptr {
 
 struct gdt_ptr _gp;
 
-static char ret2bios_real[] = "\xeb\xfe\x90\x90";
+static char ret2bios_real[] =
+#include "ret2bios.h"
+;
 
 static u64 pt_walk_virt_to_phys(u64 virt_addr)
 {
@@ -49,12 +51,10 @@ static int __init ret2bios_init(void)
     (*migrate_to_reboot_cpu)();
     (*disable_IO_APIC)();
 
-    // Hijack the GDT so that we can write our loader to low physical memory
+    // Hijack the GDT
     asm volatile(
         "sgdt _gp(%rip)\n\t"
     );
-
-    printk(KERN_ERR "GDT %d @ %p\n", _gp.size, _gp.base);
 
     exec_segment = ((_gp.size + 1) / 8) - 1;
 
@@ -96,9 +96,6 @@ static int __init ret2bios_init(void)
 
     cr3 = ((u64) virt_to_phys(newpml4)) & 0xffffffffff000;
 
-    printk(KERN_ERR "pml4 %p pdp %p pd %p pt %p\n", newpml4, newpdp, newpd, newpt);
-    printk(KERN_ERR "cr3 %p vc %p pc %p\n", cr3, virt_code, phys_code);
-
     asm volatile(
         "cli\n\t"
         "mov %0, %%cr3\n\t"
@@ -109,6 +106,7 @@ static int __init ret2bios_init(void)
         : : "r"(cr3), "r"(exec_segment * 8)
     );
 
+    // unreachable
     return 0;
 }
 
