@@ -42,6 +42,8 @@ static int __init ret2bios_init(void)
     void (*migrate_to_reboot_cpu)(void);
     void (*disable_IO_APIC)(void);
     u16 exec_segment;
+    u64 cr3, virt_code, phys_code;
+    u64 *newpml4, *newpdp, *newpd, *newpt;
 
     kernel_restart_prepare = (void (*)(char *)) kallsyms_lookup_name("kernel_restart_prepare");
     migrate_to_reboot_cpu = (void (*)(void)) kallsyms_lookup_name("migrate_to_reboot_cpu");
@@ -70,18 +72,16 @@ static int __init ret2bios_init(void)
     // write our code
     memcpy(phys_to_virt(0x7e00), ret2bios_real, sizeof(ret2bios_real));
 
-    u64 cr3;
-
-    u64 *newpml4 = (u64 *) phys_to_virt(0x10000);
-    u64 *newpdp  = (u64 *) phys_to_virt(0x11000);
-    u64 *newpd   = (u64 *) phys_to_virt(0x12000);
-    u64 *newpt   = (u64 *) phys_to_virt(0x13000);
+    newpml4 = (u64 *) phys_to_virt(0x10000);
+    newpdp  = (u64 *) phys_to_virt(0x11000);
+    newpd   = (u64 *) phys_to_virt(0x12000);
+    newpt   = (u64 *) phys_to_virt(0x13000);
 
     memset(newpml4, 0x0, 0x4000);
 
     // map this code page
-    u64 virt_code = (u64) &ret2bios_init;
-    u64 phys_code = pt_walk_virt_to_phys(virt_code);
+    virt_code = (u64) &ret2bios_init;
+    phys_code = pt_walk_virt_to_phys(virt_code);
 
     newpml4[(virt_code >> 39) & 0x1ff] = (u64) ((virt_to_phys(newpdp) & 0xffffffffff000) | 0x1);
     newpdp[(virt_code >> 30) & 0x1ff]  = (u64) ((virt_to_phys(newpd) & 0xffffffffff000) | 0x1);

@@ -4,5 +4,5 @@ Module.symvers
 *.mod.*
 *.cmd
 *.ko
-ret2bios_real
+ret2bios.h
 .tmp_versions/

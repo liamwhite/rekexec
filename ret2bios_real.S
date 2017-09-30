@@ -1,8 +1,7 @@
-[org 0x7e00]
+[org 0x7c00]
 [bits 32]
 
-; Exit compatibility and protected modes and go back to
-; real mode.
+; Exit compatibility and protected modes to start the kernel.
 
 
 compat:
@@ -29,23 +28,23 @@ prot16:
       mov          eax, cr0
       and          al, 0xfe
       mov          cr0, eax
+      xor          eax, eax
       jmp          0x0:real
 
 real:
-      mov          esp, 0x7c00
-      xor          ax, ax
+      ; start the kernel in real mode at 0x20200
+      mov          ax, 0x2000
       mov          ds, ax
       mov          es, ax
       mov          fs, ax
       mov          gs, ax
       mov          ss, ax
-
-loop:
-      jmp          loop
+      mov          sp, 0xe000
+      jmp          0x2020:0x0
 
 gdt_desc:
-    dw gdt_end - gdt - 1
-    dd gdt
+      dw gdt_end - gdt - 1
+      dd gdt
 
 align 4
 gdt:
